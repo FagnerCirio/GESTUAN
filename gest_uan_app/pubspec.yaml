@@ -1,0 +1,33 @@
+name: gest_uan_app
+description: "Aplicativo para gestão de Unidade de Alimentação e Nutrição."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  http: ^1.2.1
+  intl: ^0.17.0 
+  collection: ^1.18.0
+  # Pacotes para PDF e manipulação de arquivos
+  pdf: ^3.11.0          # Biblioteca principal para criar PDFs
+  path_provider: ^2.1.3 # Para encontrar diretórios no dispositivo
+  open_file: ^3.3.4      # Para abrir o PDF gerado (opcional, mas útil)
+
+ 
+  fl_chart: ^0.68.0 
+
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

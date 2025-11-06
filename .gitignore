@@ -1,0 +1,5 @@
+gest_uan_app/build/
+GestUan/target/
+.idea/
+.vscode/
+*.iml
