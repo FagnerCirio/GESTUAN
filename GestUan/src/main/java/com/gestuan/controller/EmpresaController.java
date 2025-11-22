@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/empresas")
+// Mapeamento correto para resolver o erro 404
+@RequestMapping("/api/empresas") 
 @Transactional
 public class EmpresaController {
 
@@ -25,6 +26,7 @@ public class EmpresaController {
 
     @GetMapping("/{cnpj}")
     public ResponseEntity<Empresa> buscarEmpresaPorCnpj(@PathVariable String cnpj) {
+        // Uso correto do map no Optional
         return empresaRepository.findById(cnpj)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -39,8 +41,8 @@ public class EmpresaController {
     public ResponseEntity<Empresa> atualizarEmpresa(@PathVariable String cnpj, @RequestBody Empresa detalhesEmpresa) {
         return empresaRepository.findById(cnpj)
                 .map(empresaExistente -> {
+                    // Copia os dados do corpo da requisição para a entidade existente
                     empresaExistente.setNome(detalhesEmpresa.getNome());
-                    // AJUSTE AQUI: Adicionando a atualização do endereço
                     empresaExistente.setEndereco(detalhesEmpresa.getEndereco());
                     
                     Empresa empresaAtualizada = empresaRepository.save(empresaExistente);
@@ -53,7 +55,8 @@ public class EmpresaController {
         return empresaRepository.findById(cnpj)
                 .map(empresa -> {
                     empresaRepository.delete(empresa);
-                    return ResponseEntity.ok().build();
+                    // Retorna 204 No Content para indicar sucesso na exclusão sem corpo de resposta
+                    return ResponseEntity.noContent().build(); 
                 }).orElse(ResponseEntity.notFound().build());
     }
 }

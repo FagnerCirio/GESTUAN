@@ -13,7 +13,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       title: 'GEST-UAN',
       theme: ThemeData(primarySwatch: Colors.teal, useMaterial3: true),
       home: const LoginScreen(),

@@ -1,13 +1,13 @@
 // lib/screens/company_list_screen.dart
 import 'package:flutter/material.dart';
+import '../models/usuario_model.dart';
 import '../models/empresa_model.dart';
-import '../models/usuario_model.dart'; // Importa o modelo
 import '../services/empresa_service.dart';
-import 'add_empresa_screen.dart';
 import 'company_detail_screen.dart';
+import '../widgets/scaffold_with_drawer.dart';
+import 'add_empresa_screen.dart';
 
 class CompanyListScreen extends StatefulWidget {
-  // 1. TELA AGORA RECEBE O USUÁRIO
   final Usuario usuario;
   const CompanyListScreen({super.key, required this.usuario});
 
@@ -16,83 +16,171 @@ class CompanyListScreen extends StatefulWidget {
 }
 
 class _CompanyListScreenState extends State<CompanyListScreen> {
+  late Future<List<Empresa>> _empresasFuture;
   final EmpresaService _empresaService = EmpresaService();
-  late Future<List<Empresa>> _empresas;
 
   @override
   void initState() {
     super.initState();
-    _loadEmpresas();
+    _carregarEmpresas();
   }
 
-  void _loadEmpresas() {
+  void _carregarEmpresas() {
     setState(() {
-      _empresas = _empresaService.getEmpresas();
+      _empresasFuture = _empresaService.getEmpresas();
     });
-  }
-
-  void _navigateToAddEmpresa() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddEmpresaScreen()),
-    );
-    if (result == true) {
-      _loadEmpresas();
-    }
-  }
-
-  void _navigateToDetail(Empresa empresa) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        // CORREÇÃO AQUI: Passa a empresa E o usuário
-        builder: (context) => CompanyDetailScreen(
-            empresa: empresa,
-            usuario: widget.usuario // Passa o usuário recebido
-            ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Gerenciar Empresas')),
-      drawer: Drawer(
-          child:
-              Container()), // Adiciona um drawer placeholder para consistência, se necessário
+    return ScaffoldWithDrawer(
+      title: 'Gerenciar Empresas',
+      usuario: widget.usuario,
+
+      // Botão Adicionar EMPRESA
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.teal,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddEmpresaScreen()),
+          ).then((_) => _carregarEmpresas());
+        },
+      ),
+
       body: FutureBuilder<List<Empresa>>(
-        future: _empresas,
+        future: _empresasFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('Erro: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Nenhuma empresa cadastrada.'));
-          }
+            return const Center(child: Text('Nenhuma empresa encontrada.'));
+          } else {
+            final empresas = snapshot.data!;
 
-          final empresas = snapshot.data!;
-          return ListView.builder(
-            itemCount: empresas.length,
-            itemBuilder: (context, index) {
-              final empresa = empresas[index];
-              return ListTile(
-                title: Text(empresa.nome),
-                subtitle: Text('CNPJ: ${empresa.cnpj}'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () => _navigateToDetail(
-                    empresa), // Chama a função que agora passa o usuário
-              );
-            },
-          );
+            return GridView.builder(
+              padding: const EdgeInsets.all(16.0),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4, // 4 Colunas
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.0, // Quadrado
+              ),
+              itemCount: empresas.length,
+              itemBuilder: (context, index) {
+                final empresa = empresas[index];
+                return _buildEmpresaCard(context, empresa);
+              },
+            );
+          }
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddEmpresa,
-        tooltip: 'Adicionar Empresa',
-        child: const Icon(Icons.add),
-      ),
+    );
+  }
+
+  // --- CARD DE EMPRESA COM REMOÇÃO ---
+  Widget _buildEmpresaCard(BuildContext context, Empresa empresa) {
+    return Stack(
+      children: [
+        Card(
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: Colors.white,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CompanyDetailScreen(
+                    empresa: empresa,
+                    usuario: widget.usuario,
+                  ),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child:
+                      const Icon(Icons.business, size: 24, color: Colors.blue),
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  child: Text(
+                    empresa.nome,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // BOTÃO EXCLUIR (Canto direito superior)
+        Positioned(
+          top: -5,
+          right: -5,
+          child: IconButton(
+            icon: const Icon(Icons.remove_circle,
+                color: Colors.redAccent, size: 18),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Excluir Empresa?'),
+                  content: Text(
+                      'Deseja excluir "${empresa.nome}" e todas as suas unidades?'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancelar')),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        try {
+                          await _empresaService.deletarEmpresa(empresa.cnpj);
+                          _carregarEmpresas(); // Atualiza a tela
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Empresa removida.')));
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('Erro: $e'),
+                                backgroundColor: Colors.red));
+                          }
+                        }
+                      },
+                      child: const Text('Excluir',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

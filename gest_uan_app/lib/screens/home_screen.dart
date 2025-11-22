@@ -1,83 +1,62 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import '../models/usuario_model.dart';
-import '../widgets/app_drawer.dart'; // Importa o novo Drawer
-import 'login_screen.dart';
-
-enum MenuOption { configuracoes, sair }
+import '../widgets/scaffold_with_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
   final Usuario usuario;
   const HomeScreen({super.key, required this.usuario});
 
-  void _onMenuSelection(MenuOption item, BuildContext context) {
-    switch (item) {
-      case MenuOption.configuracoes:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Navegando para Configurações...')),
-        );
-        break;
-      case MenuOption.sair:
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: AppDrawer(usuario: usuario),
+    return ScaffoldWithDrawer(
+      title: 'Painel Principal',
+      usuario: usuario,
+      // REMOVIDO: actions: [...]
+      // (Não precisamos mais passar o menu aqui, o ScaffoldWithDrawer já cria ele sozinho)
 
-      appBar: AppBar(
-        title: const Text('Painel Principal'),
-        actions: [
-          PopupMenuButton<MenuOption>(
-            onSelected: (item) => _onMenuSelection(item, context),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  Text(usuario.nome),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_drop_down),
-                ],
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo
+              SizedBox(
+                height: 200,
+                child: Image.asset(
+                  'assets/images/logo.jpg', // .jpg conforme seu uso
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.restaurant_menu,
+                        size: 80, color: Colors.grey);
+                  },
+                ),
               ),
-            ),
 
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
-              const PopupMenuItem<MenuOption>(
-                value: MenuOption.configuracoes,
-                child: Text('Configurações'),
+              const SizedBox(height: 30),
+
+              Text(
+                'Bem-vindo(a),',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Colors.grey[600]),
               ),
-              const PopupMenuItem<MenuOption>(
-                value: MenuOption.sair,
-                child: Text('Sair'),
+              Text(
+                usuario.nome,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold, color: Colors.teal[800]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Selecione uma opção no menu lateral para começar.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.restaurant_menu, size: 80, color: Colors.grey),
-            const SizedBox(height: 20),
-            Text(
-              'Bem-vindo(a), ${usuario.nome}!',
-              style: Theme.of(context).textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            const Text(
-              'Selecione uma opção no menu lateral para começar.',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       ),
     );

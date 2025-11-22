@@ -1,17 +1,16 @@
 // lib/screens/checklist_screen.dart
 import 'package:flutter/material.dart';
 import '../models/checklist_item_model.dart';
-import '../models/usuario_model.dart'; // Precisa do usuário logado
-import '../models/unidade_model.dart'; // Precisa da unidade atual
+import '../models/usuario_model.dart';
+import '../models/unidade_model.dart';
 import '../services/checklist_service.dart';
 import 'package:collection/collection.dart';
-import '../utils/pdf_generator.dart'; // Importa nosso gerador
-import 'package:open_file/open_file.dart'; // Importa para abrir o arquivo
+import '../utils/pdf_generator.dart';
+import 'package:open_file/open_file.dart';
 
 class ChecklistScreen extends StatefulWidget {
   final String checklistType;
   final String title;
-  // A tela agora recebe a unidade e o usuário
   final Unidade unidade;
   final Usuario usuario;
 
@@ -28,14 +27,19 @@ class ChecklistScreen extends StatefulWidget {
 }
 
 class _ChecklistScreenState extends State<ChecklistScreen> {
-  // Mapas e variáveis como antes
   Future<Map<String, List<ChecklistItem>>>? _groupedItemsFuture;
+
+  // --- CORREÇÃO DO ERRO ---
+  // Removemos o 'late'. Agora é anulável (?)
+  Map<String, List<ChecklistItem>>? _dadosCarregados;
+
   final ChecklistService _service = ChecklistService();
   final Map<int, String> _respostas = {};
   final Map<int, TextEditingController> _observacoesControllers = {};
   int _totalItems = 0;
   double _currentScore = 0.0;
-  bool _isExporting = false; // Flag para indicar que o PDF está sendo gerado
+  bool _isExporting = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -52,16 +56,19 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         _observacoesControllers.putIfAbsent(
             itemId, () => TextEditingController());
       }
-      return groupBy(items, (ChecklistItem item) => item.secao);
+      final grouped = groupBy(items, (ChecklistItem item) => item.secao);
+
+      // Salva os dados na variável de cache assim que carregar
+      _dadosCarregados = grouped;
+
+      return grouped;
     });
-    // Atualiza score inicial
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _updateScore());
     });
   }
 
   void _updateScore() {
-    // Lógica de cálculo do score continua a mesma
     int scoreConforme = 0;
     int scoreNaoAplicavel = 0;
     _respostas.forEach((key, value) {
@@ -76,7 +83,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       _currentScore = (scoreConforme / itensConsiderados) * 100;
   }
 
-  void _salvarChecklist() {
+  void _salvarChecklist() async {
     if (_respostas.length != _totalItems) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -85,26 +92,55 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       );
       return;
     }
-    _updateScore();
-    print("--- SALVANDO CHECKLIST: ${widget.title} ---");
-    print("Unidade ID: ${widget.unidade.id}"); // Usa o ID da unidade recebida
-    print("Pontuação Final: ${_currentScore.toStringAsFixed(1)}%");
-    _respostas.forEach((itemId, resposta) {
-      final observacao = _observacoesControllers[itemId]?.text ?? '';
-      print("Item ID: $itemId, Resposta: $resposta, Observação: '$observacao'");
-    });
+    if (_isSaving) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Checklist salvo! (Verifique o console)'),
-          backgroundColor: Colors.green),
-    );
-    // TODO: Implementar envio real para o backend
+    setState(() => _isSaving = true);
+    _updateScore();
+
+    try {
+      List<Map<String, dynamic>> respostasItens = [];
+      _respostas.forEach((itemId, resposta) {
+        final observacao = _observacoesControllers[itemId]?.text ?? '';
+        respostasItens.add({
+          'checklistItem': {'id': itemId},
+          'resposta': resposta,
+          'observacao': observacao,
+        });
+      });
+
+      Map<String, dynamic> payload = {
+        'unidade': {'id': widget.unidade.id},
+        'usuario': {'crn': widget.usuario.crn},
+        'checklistType': widget.checklistType,
+        'pontuacaoFinal': _currentScore,
+        'respostas': respostasItens,
+      };
+
+      await _service.salvarChecklistResposta(payload);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Checklist salvo com sucesso no servidor!'),
+              backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      print("Erro ao salvar checklist: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
-  // FUNÇÃO ATUALIZADA PARA EXPORTAR PDF
   void _exportarChecklist() async {
-    // Validação: só exporta se tudo estiver respondido
     if (_respostas.length != _totalItems) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -113,10 +149,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       );
       return;
     }
-    if (_isExporting) return; // Evita cliques múltiplos
+    if (_isExporting) return;
 
-    setState(() => _isExporting = true); // Mostra indicador de progresso
-    // Mostra uma mensagem mais longa enquanto gera
+    setState(() => _isExporting = true);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
           content: Text('Gerando PDF... Aguarde um momento.'),
@@ -124,45 +159,41 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
 
     try {
-      // Garante que o score está atualizado
       _updateScore();
 
-      // Pega o mapa agrupado (precisamos esperar o Future, se ainda não carregou)
-      final groupedItems = await _groupedItemsFuture;
-      if (groupedItems == null)
-        throw Exception("Dados do checklist não carregados.");
+      // --- CORREÇÃO DE SEGURANÇA ---
+      // Verificamos se a variável já foi preenchida
+      final groupedItems = _dadosCarregados;
 
-      // Chama a função de geração de PDF, passando todos os dados necessários
+      if (groupedItems == null) {
+        throw Exception(
+            "Os dados ainda estão carregando. Tente novamente em alguns segundos.");
+      }
+
       final filePath = await generateChecklistPdf(
         checklistTitle: widget.title,
         groupedItems: groupedItems,
         respostas: _respostas,
         observacoesControllers: _observacoesControllers,
         score: _currentScore,
-        nomeUsuario: widget.usuario.nome, // Passa o nome do usuário logado
-        nomeUnidade: widget.unidade.nome, // Passa o nome da unidade atual
+        nomeUsuario: widget.usuario.nome,
+        nomeUnidade: widget.unidade.nome,
       );
 
-      // Tenta abrir o arquivo PDF gerado
       final openResult = await OpenFile.open(filePath);
 
-      // Esconde a mensagem "Gerando..."
       if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       if (openResult.type != ResultType.done) {
-        // Se não conseguiu abrir, mostra o caminho onde foi salvo
-        print('Erro ao abrir PDF: ${openResult.message}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text(
-                    'PDF salvo em "$filePath", mas não foi possível abrir automaticamente.'),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 8)),
+                content:
+                    Text('PDF salvo, mas não abriu: ${openResult.message}'),
+                backgroundColor: Colors.orange),
           );
         }
       } else {
-        // Se conseguiu abrir, mostra mensagem de sucesso curta
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -172,23 +203,58 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         }
       }
     } catch (e) {
-      // Em caso de erro na geração ou salvamento
       print("Erro ao gerar PDF: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .hideCurrentSnackBar(); // Esconde a msg "Gerando..."
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Erro ao gerar PDF: $e'),
+              content: Text('Erro: $e'), // Mensagem de erro mais limpa
               backgroundColor: Colors.red),
         );
       }
     } finally {
-      // Esconde o indicador de progresso, mesmo se der erro
       if (mounted) {
         setState(() => _isExporting = false);
       }
     }
+  }
+
+  // Helper para os botões de rádio (Design Horizontal)
+  Widget _buildRadioOption(
+      int itemId, String value, String label, Color activeColor) {
+    final isSelected = _respostas[itemId] == value;
+    return InkWell(
+      onTap: () => setState(() {
+        _respostas[itemId] = value;
+        _updateScore();
+      }),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Radio<String>(
+              value: value,
+              groupValue: _respostas[itemId],
+              activeColor: activeColor,
+              visualDensity: VisualDensity.compact,
+              onChanged: (val) => setState(() {
+                _respostas[itemId] = val!;
+                _updateScore();
+              }),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? activeColor : Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -218,8 +284,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       body: FutureBuilder<Map<String, List<ChecklistItem>>>(
         future: _groupedItemsFuture,
         builder: (context, snapshot) {
-          // --- O conteúdo do FutureBuilder (ListView.separated, etc.) ---
-          // --- permanece exatamente o mesmo da versão anterior ---
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
@@ -266,7 +330,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       final int itemId = item.id.toInt();
 
                       return ExpansionTile(
-                        key: PageStorageKey('item_$itemId'),
+                        key: ValueKey('${widget.checklistType}_item_$itemId'),
                         title: Text(item.itemAvaliado,
                             style: const TextStyle(fontSize: 15)),
                         backgroundColor: Colors.white,
@@ -278,55 +342,36 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         tilePadding: const EdgeInsets.symmetric(
                             horizontal: 16.0, vertical: 4.0),
                         children: [
-                          RadioListTile<String>(
-                            title: const Text('Conforme (C)'),
-                            value: 'C',
-                            groupValue: _respostas[itemId],
-                            onChanged: (value) => setState(() {
-                              _respostas[itemId] = value!;
-                              _updateScore();
-                            }),
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            activeColor: Colors.teal,
+                          // Layout Horizontal dos Botões
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildRadioOption(
+                                  itemId, 'C', 'Conforme', Colors.green),
+                              _buildRadioOption(
+                                  itemId, 'NC', 'Não Conf.', Colors.red),
+                              _buildRadioOption(
+                                  itemId, 'NA', 'N/A', Colors.grey),
+                            ],
                           ),
-                          RadioListTile<String>(
-                            title: const Text('Não Conforme (NC)'),
-                            value: 'NC',
-                            groupValue: _respostas[itemId],
-                            onChanged: (value) => setState(() {
-                              _respostas[itemId] = value!;
-                              _updateScore();
-                            }),
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            activeColor: Colors.teal,
-                          ),
-                          RadioListTile<String>(
-                            title: const Text('Não se Aplica (NA)'),
-                            value: 'NA',
-                            groupValue: _respostas[itemId],
-                            onChanged: (value) => setState(() {
-                              _respostas[itemId] = value!;
-                              _updateScore();
-                            }),
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            activeColor: Colors.teal,
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _observacoesControllers[itemId],
-                            decoration: const InputDecoration(
-                              labelText: 'Evidências / Observações',
-                              hintText: 'Digite aqui...',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  vertical: 10.0, horizontal: 12.0),
+
+                          if (_respostas[itemId] == 'NC') ...[
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _observacoesControllers[itemId],
+                              decoration: const InputDecoration(
+                                labelText:
+                                    'Evidências / Observações (Obrigatório)',
+                                hintText: 'Descreva a não conformidade...',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10.0, horizontal: 12.0),
+                                isDense: true,
+                              ),
+                              maxLines: 2,
+                              style: const TextStyle(fontSize: 14),
                             ),
-                            maxLines: 3,
-                            style: const TextStyle(fontSize: 14),
-                          ),
+                          ],
                         ],
                       );
                     },
@@ -337,21 +382,27 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           );
         },
       ),
-      // Botões Salvar e Exportar
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           FloatingActionButton.extended(
-            onPressed: _salvarChecklist,
-            label: const Text('Salvar'),
-            icon: const Icon(Icons.save),
+            onPressed: _isSaving ? null : _salvarChecklist,
+            label: _isSaving ? const Text('Salvando...') : const Text('Salvar'),
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ))
+                : const Icon(Icons.save),
             heroTag: 'saveChecklist',
-            backgroundColor: Colors.teal, // Cor diferente
+            backgroundColor: _isSaving ? Colors.grey : Colors.teal,
           ),
           const SizedBox(height: 8),
           FloatingActionButton.extended(
-            // Mostra indicador de progresso enquanto gera o PDF
             onPressed: _isExporting ? null : _exportarChecklist,
             label: _isExporting
                 ? const Text('Gerando...')

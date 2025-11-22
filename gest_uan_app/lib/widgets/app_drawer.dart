@@ -4,7 +4,6 @@ import '../models/usuario_model.dart';
 import '../screens/company_list_screen.dart';
 import '../screens/contracts_screen.dart';
 import '../screens/home_screen.dart';
-// Removida a importação de desperdicio_screen, pois não é mais usada aqui
 
 class AppDrawer extends StatelessWidget {
   final Usuario usuario;
@@ -17,9 +16,12 @@ class AppDrawer extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: <Widget>[
-          // Cabeçalho
+          // --- CABEÇALHO (TEAL) ---
           UserAccountsDrawerHeader(
-            accountName: Text(usuario.nome),
+            accountName: Text(
+              usuario.nome,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             accountEmail: Text(usuario.email),
             currentAccountPicture: const CircleAvatar(
               backgroundColor: Colors.white,
@@ -29,9 +31,12 @@ class AppDrawer extends StatelessWidget {
               color: Colors.teal,
             ),
           ),
+
+          // --- ITENS DO MENU ---
+
           // Item: Painel Principal
           ListTile(
-            leading: const Icon(Icons.home),
+            leading: const Icon(Icons.home, color: Colors.teal),
             title: const Text('Painel Principal'),
             onTap: () {
               Navigator.pop(context);
@@ -42,34 +47,38 @@ class AppDrawer extends StatelessWidget {
               );
             },
           ),
-          // Item: Gerenciar Empresas (COM A CORREÇÃO)
+
+          const Divider(),
+
+          // Item: Gerenciar Empresas
           ListTile(
-            leading: const Icon(Icons.business),
+            leading: const Icon(Icons.business, color: Colors.teal),
             title: const Text('Gerenciar Empresas'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                // CORREÇÃO AQUI: Passa o 'usuario' para a CompanyListScreen
                 MaterialPageRoute(
                     builder: (context) => CompanyListScreen(usuario: usuario)),
               );
             },
           ),
+
           // Item: Gerenciar Contratos
           ListTile(
-            leading: const Icon(Icons.description),
+            leading: const Icon(Icons.description, color: Colors.teal),
             title: const Text('Gerenciar Contratos'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const ContractsScreen()),
+                    // --- CORREÇÃO AQUI ---
+                    // Removemos o 'const' e passamos o 'usuario'
+                    builder: (context) => ContractsScreen(usuario: usuario)),
               );
             },
           ),
-          // Item: Controle de Desperdício (REMOVIDO, POIS AGORA ESTÁ DENTRO DA UNIDADE)
         ],
       ),
     );

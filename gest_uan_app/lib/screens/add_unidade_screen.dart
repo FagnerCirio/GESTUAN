@@ -5,10 +5,8 @@ import '../models/unidade_model.dart';
 import '../services/unidade_service.dart';
 
 class AddUnidadeScreen extends StatefulWidget {
-  // 1. ADICIONAMOS O CAMPO PARA RECEBER A EMPRESA
   final Empresa empresa;
 
-  // 2. O CONSTRUTOR AGORA EXIGE O PARÂMETRO 'empresa'
   const AddUnidadeScreen({super.key, required this.empresa});
 
   @override
@@ -26,22 +24,31 @@ class _AddUnidadeScreenState extends State<AddUnidadeScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
+        // 1. Criamos o objeto Unidade JÁ vinculando a empresa nele
         final novaUnidade = Unidade(
+          id: null, // O backend gera o ID
           nome: _nomeController.text,
           endereco: _enderecoController.text,
+          cnpj: '', // Se não tiver campo de CNPJ nesta tela, mandamos vazio
+          empresa: widget.empresa, // <--- VINCULA A EMPRESA AQUI
         );
-        // Usa o CNPJ da empresa que recebemos via 'widget.empresa'
-        await _unidadeService.createUnidade(
-          novaUnidade,
-          empresaCnpj: widget.empresa.cnpj,
-        );
-        Navigator.pop(context, true);
+
+        // 2. Chamamos o método correto 'cadastrarUnidade'
+        await _unidadeService.cadastrarUnidade(novaUnidade);
+
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          );
+        }
       } finally {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -49,8 +56,11 @@ class _AddUnidadeScreenState extends State<AddUnidadeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // O título agora usa o nome da empresa
-      appBar: AppBar(title: Text('Nova Unidade para ${widget.empresa.nome}')),
+      appBar: AppBar(
+        title: Text('Nova Unidade para ${widget.empresa.nome}'),
+        backgroundColor: Colors.teal, // Mantendo o padrão visual
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -67,12 +77,15 @@ class _AddUnidadeScreenState extends State<AddUnidadeScreen> {
                 controller: _enderecoController,
                 decoration: const InputDecoration(labelText: 'Endereço'),
               ),
-              // Não precisamos mais do dropdown, pois a empresa já foi definida
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isLoading ? null : _saveUnidade,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                ),
                 child: _isLoading
-                    ? const CircularProgressIndicator()
+                    ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Salvar'),
               ),
             ],

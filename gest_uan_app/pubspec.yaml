@@ -12,15 +12,20 @@ dependencies:
     sdk: flutter
 
   http: ^1.2.1
-  intl: ^0.17.0 
-  collection: ^1.18.0
-  # Pacotes para PDF e manipulação de arquivos
-  pdf: ^3.11.0          # Biblioteca principal para criar PDFs
-  path_provider: ^2.1.3 # Para encontrar diretórios no dispositivo
-  open_file: ^3.3.4      # Para abrir o PDF gerado (opcional, mas útil)
+  
+  # Pacote de formatação
+  intl: ^0.19.0 
 
- 
+  # Biblioteca de gráficos
   fl_chart: ^0.68.0 
+
+  # Pacotes para PDF
+  pdf: ^3.11.0
+  path_provider: ^2.1.3
+  open_file: ^3.3.4
+  
+  # Pacote para agrupar listas
+  collection: ^1.18.0
 
   cupertino_icons: ^1.0.6
 
@@ -28,6 +33,25 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  # Pacote para gerar os ícones
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+
+  # Registra a pasta de imagens para usarmos na tela de Login/Home
+  assets:
+    - assets/images/
+
+# --- CONFIGURAÇÃO DOS ÍCONES ---
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.jpg"
+  min_sdk_android: 21
+  # Configuração específica para WEB (Chrome)
+  web:
+    generate: true
+    image_path: "assets/images/logo.jpg"
+    background_color: "#ffffff" # Fundo branco para o ícone
+    theme_color: "#ffffff"

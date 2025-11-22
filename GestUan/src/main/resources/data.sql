@@ -1,4 +1,23 @@
+-- ==================================================================================
+-- 1. LIMPEZA SEGURA DA BASE DE DADOS (Ordem Obrigatória)
+-- ==================================================================================
+
+-- Primeiro: Apaga as respostas dos itens (o nível mais baixo da hierarquia)
+DELETE FROM checklist_resposta_item;
+
+-- Segundo: Apaga o cabeçalho das respostas
+DELETE FROM checklist_resposta;
+
+-- Terceiro: AGORA SIM, pode apagar as perguntas (itens do checklist)
 DELETE FROM checklist_item;
+
+-- (Opcional) Se quiser limpar unidades e empresas para evitar conflitos antigos:
+-- DELETE FROM unidade;
+-- DELETE FROM empresa;
+
+-- ==================================================================================
+-- 2. INSERÇÃO DOS DADOS (Seus Checklists)
+-- ==================================================================================
 
 -- CHECKLIST: AUDITORIA DE QUALIDADE
 
@@ -86,3 +105,25 @@ INSERT INTO checklist_item (checklist_type, secao, item_avaliado) VALUES
 ('AUDITORIA_QUALIDADE', 'TRANSPORTE DO ALIMENTO PREPARADO', 'Os alimentos são acondicionados em recipientes hermeticamente fechados e de material apropriado?'),
 ('AUDITORIA_QUALIDADE', 'TRANSPORTE DO ALIMENTO PREPARADO', 'A temperatura do alimento preparado no início e ao final do transporte é monitorada?');
 
+-- ==================================================================================
+-- CHECKLIST: CONTROLE DE EPIs (Baseado na NR-6)
+-- ==================================================================================
+
+-- Seção: PROTEÇÃO BÁSICA E UNIFORMES
+INSERT INTO checklist_item (checklist_type, secao, item_avaliado, legislacao_de_referencia) VALUES
+('CHECKLIST_EPI', 'PROTEÇÃO BÁSICA', 'Todos os manipuladores estão utilizando uniforme completo (calça, camisa/jaleco) limpo e em bom estado?', 'NR-6 / RDC 216'),
+('CHECKLIST_EPI', 'PROTEÇÃO BÁSICA', 'Os calçados de segurança são fechados, antiderrapantes e estão em bom estado de conservação?', 'NR-6'),
+('CHECKLIST_EPI', 'PROTEÇÃO BÁSICA', 'O uso de toucas ou redes de proteção para cabelos está sendo cumprido por todos na área de produção?', 'RDC 216');
+
+-- Seção: EPIs PARA ATIVIDADES ESPECÍFICAS (Térmico e Químico)
+INSERT INTO checklist_item (checklist_type, secao, item_avaliado, legislacao_de_referencia) VALUES
+('CHECKLIST_EPI', 'ATIVIDADES ESPECÍFICAS', 'As luvas de proteção térmica (para fornos e panelas quentes) estão disponíveis e sem furos ou desgaste excessivo?', 'NR-6'),
+('CHECKLIST_EPI', 'ATIVIDADES ESPECÍFICAS', 'Existe jaqueta térmica com capuz e calça para acesso às câmaras frias (se aplicável)?', 'NR-6'),
+('CHECKLIST_EPI', 'ATIVIDADES ESPECÍFICAS', 'Luvas de borracha cano longo e aventais impermeáveis estão disponíveis para a equipe de higienização pesada e lavagem de panelas?', 'NR-6'),
+('CHECKLIST_EPI', 'ATIVIDADES ESPECÍFICAS', 'Óculos de proteção estão disponíveis para manipulação de produtos químicos fortes (ex: desincrustantes)?', 'NR-6');
+
+-- Seção: GESTÃO E DOCUMENTAÇÃO
+INSERT INTO checklist_item (checklist_type, secao, item_avaliado, legislacao_de_referencia) VALUES
+('CHECKLIST_EPI', 'GESTÃO E REGISTROS', 'A Ficha de Entrega de EPIs está assinada e atualizada para todos os funcionários?', 'NR-6 - 6.6.1'),
+('CHECKLIST_EPI', 'GESTÃO E REGISTROS', 'Os EPIs possuem Certificado de Aprovação (CA) válido?', 'NR-6'),
+('CHECKLIST_EPI', 'GESTÃO E REGISTROS', 'É realizado treinamento periódico sobre o uso correto, guarda e conservação dos EPIs?', 'NR-6 - 6.6.1');

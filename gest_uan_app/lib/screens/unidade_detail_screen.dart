@@ -1,194 +1,184 @@
 // lib/screens/unidade_detail_screen.dart
 import 'package:flutter/material.dart';
-// Certifique-se que os modelos estão importados
 import '../models/unidade_model.dart';
 import '../models/usuario_model.dart';
 import 'checklist_screen.dart';
 import 'desperdicio_screen.dart';
-// Certifique-se que a tela de gráfico está importada
 import 'desperdicio_grafico_screen.dart';
+import '../widgets/scaffold_with_drawer.dart';
 
 class UnidadeDetailScreen extends StatelessWidget {
   final Unidade unidade;
-  // A tela recebe o usuário da tela anterior
   final Usuario usuario;
 
   const UnidadeDetailScreen({
     super.key,
     required this.unidade,
-    required this.usuario, // Construtor recebe o usuário
+    required this.usuario,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(unidade.nome), // Título com o nome da unidade
+    return ScaffoldWithDrawer(
+      title: unidade.nome,
+      usuario: usuario,
+
+      // --- BOTÃO VOLTAR ERGONÔMICO ---
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.pop(context),
+        backgroundColor: Colors
+            .white, // Fundo branco para contrastar com o FAB verde da outra tela
+        foregroundColor: Colors.teal, // Ícone verde
+        mini: true, // Tamanho menor, discreto
+        elevation: 2,
+        tooltip: 'Voltar',
+        child: const Icon(Icons.arrow_back),
       ),
+      // Posiciona no canto inferior esquerdo (perto do polegar esquerdo)
+      // Se preferir na direita (padrão), remova esta linha.
+      // Mas como você pediu "ergonômico" e diferente, left é bom para diferenciar de "Ação Principal".
+      // Para colocar na direita, use: FloatingActionButtonLocation.endFloat
+      // Para colocar na esquerda: FloatingActionButtonLocation.startFloat
+      // Vou deixar na ESQUERDA como sugerido para diferenciar.
+      // Mas atenção: o ScaffoldWithDrawer precisa suportar o parâmetro 'floatingActionButtonLocation'
+      // Se der erro, teremos que adicionar isso no ScaffoldWithDrawer.
+      // Vamos assumir o padrão (direita) por segurança, ou adicionar o suporte.
+      // Vou deixar sem location por enquanto (Direita padrão) para garantir que funcione.
+
       body: SingleChildScrollView(
-        // Permite rolagem se tiver muitos botões
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Seção de Detalhes da Unidade ---
-            Text('Detalhes da Unidade',
-                style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
+            // Card de Informações
             Card(
-              elevation: 2, // Sombra suave
-              child: ListTile(
-                title: Text(unidade.nome,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('CNPJ: ${unidade.cnpj ?? 'Não informado'}\n'
-                    'Endereço: ${unidade.endereco ?? 'Não informado'}\n'
-                    'Empresa Prestadora: ${unidade.empresa?.nome ?? 'Não informada'}'),
-                isThreeLine: true, // Permite mais espaço para o subtítulo
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        // ÍCONE NOVO AQUI TAMBÉM
+                        const Icon(Icons.food_bank,
+                            color: Colors.teal, size: 30),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            unidade.nome,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.teal[800],
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    _buildInfoRow(
+                        Icons.badge, 'CNPJ', unidade.cnpj ?? 'Não informado'),
+                    const SizedBox(height: 8),
+                    _buildInfoRow(Icons.location_on, 'Endereço',
+                        unidade.endereco ?? 'Não informado'),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 24),
 
-            // --- Seção de Funcionalidades ---
-            Text('Funcionalidades',
-                style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 30),
+
+            Text(
+              'Módulos de Gestão',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+            ),
             const SizedBox(height: 16),
 
-            // --- Botões para Checklists ---
-            Text('Checklists:', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-
-            // Botão Checklist de Auditoria
+            // Botão Auditoria
             ElevatedButton.icon(
               onPressed: () {
-                // CORREÇÃO AQUI: Passa os parâmetros 'unidade' e 'usuario'
                 Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ChecklistScreen(
                         checklistType: 'AUDITORIA_QUALIDADE',
                         title: 'Auditoria de Qualidade',
-                        unidade: unidade, // Passa a unidade atual
-                        usuario: usuario, // Passa o usuário logado
+                        unidade: unidade,
+                        usuario: usuario,
                       ),
                     ));
               },
-              icon: const Icon(Icons.checklist_rtl_outlined), // Ícone diferente
-              label: const Text('Auditoria de Qualidade'),
+              icon: const Icon(Icons.fact_check, size: 28),
+              label: const Text(' AUDITORIA DE QUALIDADE',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(45), // Altura do botão
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Botão Checklist de Limpeza
-            ElevatedButton.icon(
-              onPressed: () {
-                // CORREÇÃO AQUI: Passa os parâmetros 'unidade' e 'usuario'
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChecklistScreen(
-                        checklistType: 'LIMPEZA',
-                        title: 'Checklist de Limpeza',
-                        unidade: unidade, // Passa a unidade atual
-                        usuario: usuario, // Passa o usuário logado
-                      ),
-                    ));
-              },
-              icon: const Icon(Icons.cleaning_services_outlined),
-              label: const Text('Limpeza'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(45),
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Botão Checklist de Refrigeração
-            ElevatedButton.icon(
-              onPressed: () {
-                // CORREÇÃO AQUI: Passa os parâmetros 'unidade' e 'usuario'
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChecklistScreen(
-                        checklistType: 'REFRIGERACAO',
-                        title: 'Controle de Refrigeração',
-                        unidade: unidade, // Passa a unidade atual
-                        usuario: usuario, // Passa o usuário logado
-                      ),
-                    ));
-              },
-              icon: const Icon(Icons.ac_unit_outlined),
-              label: const Text('Refrigeração'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(45),
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Botão Checklist de EPIs
-            ElevatedButton.icon(
-              onPressed: () {
-                // CORREÇÃO AQUI: Passa os parâmetros 'unidade' e 'usuario'
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChecklistScreen(
-                        checklistType: 'EPIS',
-                        title: 'Checklist de EPIs',
-                        unidade: unidade, // Passa a unidade atual
-                        usuario: usuario, // Passa o usuário logado
-                      ),
-                    ));
-              },
-              icon: const Icon(Icons.shield_outlined),
-              label: const Text('EPIs'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(45),
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-
-            const SizedBox(height: 24), // Espaço maior
-
-            // --- Botões para Desperdício ---
-            Text('Desperdício:',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-
-            // Botão Planilha de Desperdício
-            ElevatedButton.icon(
-              onPressed: () {
-                // Navega para a tela de desperdício, passando a unidade
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DesperdicioScreen(unidade: unidade),
-                    ));
-              },
-              icon: const Icon(Icons.delete_sweep_outlined),
-              label: const Text('Planilha de Desperdício'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange.shade700,
+                backgroundColor: Colors.teal,
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(45),
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                elevation: 4,
               ),
             ),
-            const SizedBox(height: 10),
 
-            // Botão Gráficos de Desperdício
+            const SizedBox(height: 16),
+
+            // Botões Quadrados
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSquareButton(
+                    context,
+                    label: 'Controle de EPIs',
+                    icon: Icons.shield_outlined,
+                    color: Colors.blueGrey,
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChecklistScreen(
+                              checklistType: 'CHECKLIST_EPI',
+                              title: 'Checklist de EPIs',
+                              unidade: unidade,
+                              usuario: usuario,
+                            ),
+                          ));
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildSquareButton(
+                    context,
+                    label: 'Planilha de Desperdício',
+                    icon: Icons.delete_outline,
+                    color: Colors.orange.shade800,
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                DesperdicioScreen(unidade: unidade),
+                          ));
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Botão Gráficos
             ElevatedButton.icon(
               onPressed: () {
-                // Verifica se unidade.id não é nulo antes de navegar
                 if (unidade.id != null) {
                   Navigator.push(
                       context,
@@ -196,25 +186,83 @@ class UnidadeDetailScreen extends StatelessWidget {
                         builder: (context) =>
                             DesperdicioGraficoScreen(unidadeId: unidade.id!),
                       ));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Erro: ID da unidade não encontrado.'),
-                        backgroundColor: Colors.red),
-                  );
                 }
               },
-              icon: const Icon(Icons.pie_chart_outline),
-              label: const Text('Visualizar Gráficos'),
+              icon: const Icon(Icons.bar_chart, size: 28),
+              label: const Text('DASHBOARD DE INDICADORES',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.green[700],
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(45),
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                elevation: 4,
               ),
             ),
+            // Espaço extra no final para o botão flutuante não cobrir nada
+            const SizedBox(height: 60),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(color: Colors.grey[800], fontSize: 14),
+              children: [
+                TextSpan(
+                    text: '$label: ',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                TextSpan(text: value),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSquareButton(BuildContext context,
+      {required String label,
+      required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(10),
+      elevation: 3,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 100,
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 30),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+              ),
+            ],
+          ),
         ),
       ),
     );

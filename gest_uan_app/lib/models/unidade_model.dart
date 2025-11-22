@@ -5,7 +5,7 @@ class Unidade {
   final int? id;
   final String nome;
   final String? endereco;
-  final String? cnpj; // NOVO CAMPO
+  final String? cnpj;
   final Empresa? empresa;
 
   Unidade({
@@ -21,10 +21,20 @@ class Unidade {
       id: json['id'],
       nome: json['nome'],
       endereco: json['endereco'],
-      cnpj: json['cnpj'], // NOVO CAMPO
-      empresa: json['empresa'] != null
-          ? Empresa.fromJson(json['empresa'])
-          : null,
+      cnpj: json['cnpj'],
+      empresa:
+          json['empresa'] != null ? Empresa.fromJson(json['empresa']) : null,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nome': nome,
+      'endereco': endereco,
+      'cnpj': cnpj,
+      // AQUI está o ajuste importante
+      'empresaCnpj': empresa?.cnpj,
+    };
   }
 }
