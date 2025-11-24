@@ -57,7 +57,7 @@ class _AddUnidadeScreenState extends State<AddUnidadeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Nova Unidade para ${widget.empresa.nome}'),
+        title: Text('Unidade para ${widget.empresa.nome}'),
         backgroundColor: Colors.teal, // Mantendo o padrão visual
         foregroundColor: Colors.white,
       ),

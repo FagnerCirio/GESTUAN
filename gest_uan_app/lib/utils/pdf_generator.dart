@@ -1,14 +1,18 @@
 // lib/utils/pdf_generator.dart
 import 'dart:io';
-import 'package:flutter/services.dart'; // Para carregar fontes se necessário
+import 'dart:typed_data'; // NOVO: Necessário para retornar os bytes
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/material.dart'
-    show TextEditingController; // Apenas para o tipo
+import 'package:flutter/material.dart' show TextEditingController;
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // NOVO: Import para detectar a plataforma
 import '../models/checklist_item_model.dart';
 
-Future<String> generateChecklistPdf({
+// --- NOVO: FUNÇÃO PRINCIPAL QUE RETORNA OS BYTES DO PDF (Universal) ---
+// Toda a lógica de construção do PDF é movida para cá.
+Future<Uint8List> generateChecklistPdfBytes({
   required String checklistTitle,
   required Map<String, List<ChecklistItem>> groupedItems,
   required Map<int, String> respostas,
@@ -52,12 +56,10 @@ Future<String> generateChecklistPdf({
                 // Lista de Itens da Seção
                 ...items.map((item) {
                   final itemId = item.id.toInt();
-                  // Proteção contra nulos (??)
                   final resposta = respostas[itemId] ?? 'N/A';
                   final controller = observacoesControllers[itemId];
                   final observacao = controller?.text ?? '';
 
-                  // Define cor da resposta (Visual)
                   PdfColor corResposta = PdfColors.black;
                   if (resposta == 'C') corResposta = PdfColors.green700;
                   if (resposta == 'NC') corResposta = PdfColors.red700;
@@ -118,19 +120,51 @@ Future<String> generateChecklistPdf({
     ),
   );
 
-  // Salva o arquivo
+  return await pdf.save(); // Retorna os bytes puros
+}
+// --- FIM DA NOVA FUNÇÃO ---
+
+// --- FUNÇÃO ANTIGA (Agora adaptada para tratar apenas a SALVAMENTO/MOBILE/DESKTOP) ---
+Future<String> generateChecklistPdf({
+  required String checklistTitle,
+  required Map<String, List<ChecklistItem>> groupedItems,
+  required Map<int, String> respostas,
+  required Map<int, TextEditingController> observacoesControllers,
+  required double score,
+  required String nomeUsuario,
+  required String nomeUnidade,
+}) async {
+  if (kIsWeb) {
+    // Se for Web, lançamos um erro, pois a lógica de salvamento local não se aplica.
+    // A tela de checklist deve chamar generateChecklistPdfBytes diretamente.
+    throw UnsupportedError(
+        'O salvamento direto em arquivo não é suportado na Web. Use generateChecklistPdfBytes().');
+  }
+
+  // GERA OS BYTES USANDO A NOVA FUNÇÃO
+  final bytes = await generateChecklistPdfBytes(
+    checklistTitle: checklistTitle,
+    groupedItems: groupedItems,
+    respostas: respostas,
+    observacoesControllers: observacoesControllers,
+    score: score,
+    nomeUsuario: nomeUsuario,
+    nomeUnidade: nomeUnidade,
+  );
+
+  // Lógica de salvamento (funciona apenas em Mobile/Desktop)
   final output = await getApplicationDocumentsDirectory();
-  // Gera um nome único baseado no tempo para evitar conflito
   final fileName = 'checklist_${DateTime.now().millisecondsSinceEpoch}.pdf';
   final file = File("${output.path}/$fileName");
-  await file.writeAsBytes(await pdf.save());
+  await file.writeAsBytes(bytes); // Salva os bytes
 
   return file.path;
 }
 
-// Função auxiliar para desenhar o cabeçalho
+// Função auxiliar _buildHeader (mantida inalterada)
 pw.Widget _buildHeader(
     String title, String unidade, String usuario, double score) {
+  // ... (Conteúdo da função _buildHeader é idêntico ao original)
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [

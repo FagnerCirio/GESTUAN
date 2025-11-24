@@ -18,12 +18,27 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
   late Future<List<DesperdicioStats>> _futureStats;
   int touchedIndex = -1; // Para o gráfico de pizza
 
-  // Define as cores fixas para os tipos de desperdício (Pizza)
-  final Map<String, Color> _colorMap = {
-    'Resto Ingesta': Colors.red.shade400,
-    'Sobras Limpas': Colors.blue.shade400,
-  };
-  final Color _defaultColor = Colors.grey.shade400; // Cor padrão
+  // --- NOVA PALETA DE CORES VIBRANTES ---
+  // Esta lista será usada para colorir dinamicamente as fatias
+  final List<Color> _palette = [
+    Colors.red.shade700,
+    Colors.blue.shade700,
+    Colors.green.shade700,
+    Colors.orange.shade700,
+    Colors.purple.shade700,
+    Colors.teal.shade700,
+    Colors.pink.shade700,
+    Colors.indigo.shade700,
+    Colors.cyan.shade700,
+    Colors.amber.shade700,
+    Colors.brown.shade700,
+  ];
+
+  // Mapa para armazenar as cores atribuídas dinamicamente a cada chave (Tipo - Destino)
+  // Isso garante que a mesma chave sempre terá a mesma cor.
+  final Map<String, Color> _assignedColors = {};
+  int _paletteIndex = 0;
+  final Color _defaultColor = Colors.grey.shade400; // Cor de fallback
 
   @override
   void initState() {
@@ -31,18 +46,37 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
     _futureStats = _service.getStats(widget.unidadeId);
   }
 
-  // --- Funções para o Gráfico de Pizza (Peso Total) ---
+  // Função auxiliar para criar a chave Tipo+Destino
+  String _getChartKey(DesperdicioStats stat) {
+    // Usamos ?? 'Não Classificado' para garantir que nunca seja nulo
+    final destino = stat.destino ?? 'Não Classificado';
+    return '${stat.tipo} - $destino';
+  }
+
+  // --- Funções para o Gráfico de Pizza (Peso Total por TIPO E DESTINO) ---
   List<PieChartSectionData> showingSections(List<DesperdicioStats> stats) {
     final double totalPeso = stats.fold(0, (sum, item) => sum + item.totalPeso);
 
+    // Reinicia o índice para garantir que novas chaves (em uma nova chamada de dados)
+    // peguem cores sequenciais corretamente, mas chaves existentes mantêm a cor.
+    _paletteIndex = 0;
+
     return List.generate(stats.length, (i) {
       final stat = stats[i];
+      final key = _getChartKey(stat); // Chave Tipo - Destino
       final isTouched = i == touchedIndex;
       final fontSize = isTouched ? 18.0 : 14.0;
       final radius = isTouched ? 110.0 : 100.0;
       final double percentage =
           totalPeso > 0 ? (stat.totalPeso / totalPeso) * 100 : 0;
-      final Color sliceColor = _colorMap[stat.tipo] ?? _defaultColor;
+
+      // LÓGICA DE COR DINÂMICA:
+      // Se a chave não existe no mapa _assignedColors, atribui a próxima cor da _palette.
+      final Color sliceColor = _assignedColors.putIfAbsent(key, () {
+        final newColor = _palette[_paletteIndex % _palette.length];
+        _paletteIndex++;
+        return newColor;
+      });
 
       return PieChartSectionData(
         color: sliceColor,
@@ -56,13 +90,15 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
           shadows: const [Shadow(color: Colors.black, blurRadius: 2)],
         ),
         badgeWidget: isTouched
-            ? _buildBadge(stat.tipo, stat.totalPeso, sliceColor)
+            ? _buildBadge(
+                key, stat.totalPeso, sliceColor) // Usa a chave Tipo + Destino
             : null,
         badgePositionPercentageOffset: .98,
       );
     });
   }
 
+  // Atualizado para usar a chave Tipo + Destino
   Widget _buildBadge(String label, double value, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -80,22 +116,39 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
   }
 
   // --- Funções para o Gráfico de Barras (Per Capita - GERENCIAL) ---
-  // ### ATUALIZADO PARA O TCC ###
   Widget _buildPerCapitaBarChart(List<DesperdicioStats> stats) {
-    // META: 40g (Exemplo para o TCC)
     const double metaAceitavel = 40.0;
-
     double maxY = 0;
 
-    final List<Map<String, dynamic>> perCapitaData = stats.map((stat) {
-      final double perCapitaEmGramas = stat.totalRefeicoes > 0
-          ? (stat.totalPeso / stat.totalRefeicoes) * 1000
+    // NOVO: Consolidar os dados por TIPO (ignorando o DESTINO para este gráfico)
+    Map<String, List<DesperdicioStats>> statsByTipo = {};
+    for (var stat in stats) {
+      statsByTipo.putIfAbsent(stat.tipo, () => []).add(stat);
+    }
+
+    final List<Map<String, dynamic>> perCapitaData =
+        statsByTipo.entries.map((entry) {
+      final tipo = entry.key;
+      final List<DesperdicioStats> tipoStats = entry.value;
+
+      // Soma o peso total e o número de refeições para o TIPO
+      final double totalPesoConsolidado =
+          tipoStats.fold(0, (sum, item) => sum + item.totalPeso);
+      final int totalRefeicoesConsolidado =
+          tipoStats.fold(0, (sum, item) => sum + item.totalRefeicoes).toInt();
+
+      final double perCapitaEmGramas = totalRefeicoesConsolidado > 0
+          ? (totalPesoConsolidado / totalRefeicoesConsolidado) * 1000
           : 0;
+
       if (perCapitaEmGramas > maxY) {
         maxY = perCapitaEmGramas;
       }
-      return {'tipo': stat.tipo, 'perCapita': perCapitaEmGramas};
+      return {'tipo': tipo, 'perCapita': perCapitaEmGramas};
     }).toList();
+
+    // Reordenar para consistência, se necessário (opcional)
+    perCapitaData.sort((a, b) => a['tipo'].compareTo(b['tipo']));
 
     // Ajusta a altura máxima do gráfico para caber a linha da meta
     maxY = maxY > metaAceitavel ? maxY * 1.2 : metaAceitavel * 1.2;
@@ -107,8 +160,6 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
       final double valor = data['perCapita'];
 
       // COR INTELIGENTE:
-      // Se passar da meta = VERMELHO (Alerta)
-      // Se estiver abaixo = VERDE (Eficiência)
       Color corDaBarra =
           valor > metaAceitavel ? Colors.redAccent : Colors.green;
 
@@ -213,9 +264,7 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
 
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
-              // Sem definir cor de fundo para evitar erro de versão
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                // Texto dinâmico no tooltip
                 String status = rod.toY > metaAceitavel
                     ? "ACIMA DA META"
                     : "DENTRO DA META";
@@ -248,24 +297,65 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
     );
   }
 
-  // Função para construir a legenda
+  // Função para construir a legenda (Atualizada para usar Cores Dinâmicas)
   Widget _buildLegend(List<DesperdicioStats> stats) {
     return Wrap(
       spacing: 16.0,
       runSpacing: 8.0,
       alignment: WrapAlignment.center,
       children: stats.map((stat) {
-        final Color color = _colorMap[stat.tipo] ?? _defaultColor;
+        final key = _getChartKey(stat); // Chave Tipo - Destino
+
+        // Usa a cor atribuída dinamicamente. Se showingSections ainda não rodou, usa o default.
+        final Color color = _assignedColors[key] ?? _defaultColor;
+
+        // Exibe a combinação Tipo + Destino
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(width: 16, height: 16, color: color),
             const SizedBox(width: 8),
-            Text(
-                '${stat.tipo}: ${stat.totalPeso.toStringAsFixed(2)} Kg (Total)'),
+            Text('$key: ${stat.totalPeso.toStringAsFixed(2)} Kg (Total)'),
           ],
         );
       }).toList(),
+    );
+  }
+
+  // WIDGET: Meta Explícita
+  Widget _buildGoalLegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // SIMULAÇÃO VISUAL DA LINHA TRACEJADA
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              5, // Cria 5 pequenos traços
+              (index) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.0),
+                child: Container(
+                  width: 5, // Largura do traço
+                  height: 2, // Altura da linha
+                  color: Colors.red.withOpacity(0.8),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'A linha tracejada vermelha representa a META MÁXIMA ACEITÁVEL (40g/refeição).',
+            style: TextStyle(fontSize: 12, color: Colors.red),
+          ),
+        ],
+      ),
     );
   }
 
@@ -302,10 +392,12 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  Text('Legenda (Peso Total Acumulado)',
+                  // --- GRÁFICO DE PIZZA (COMPOSIÇÃO DO PESO) ---
+                  Text(
+                      'Legenda (Peso Total Acumulado - Detalhe por Destino)', // Título atualizado
                       style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  _buildLegend(stats),
+                  _buildLegend(stats), // Agora mostra destino
                   const SizedBox(height: 32),
                   Text('Composição do Peso Total (Kg)',
                       style: Theme.of(context).textTheme.titleLarge),
@@ -331,15 +423,20 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
                         borderData: FlBorderData(show: false),
                         sectionsSpace: 2,
                         centerSpaceRadius: 60,
-                        sections: showingSections(stats),
+                        sections: showingSections(stats), // Usa Tipo + Destino
                       ),
                     ),
                   ),
                   const SizedBox(height: 48),
-                  Text('Desperdício Per Capita (gramas)',
+
+                  // --- GRÁFICO DE BARRAS (PER CAPITA) ---
+                  Text(
+                      'Desperdício Per Capita (gramas - Consolidado por Tipo)', // Título atualizado
                       style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  _buildGoalLegend(), // Mostra explicitamente a meta
                   const SizedBox(height: 16),
-                  _buildPerCapitaBarChart(stats),
+                  _buildPerCapitaBarChart(stats), // Consolida por Tipo
                 ],
               ),
             );

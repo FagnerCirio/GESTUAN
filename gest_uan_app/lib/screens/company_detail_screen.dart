@@ -43,8 +43,6 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     return ScaffoldWithDrawer(
       title: widget.empresa.nome,
       usuario: widget.usuario,
-
-      // Botão Adicionar (Esquerda)
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: FloatingActionButton(
         heroTag: 'btnAdd',
@@ -59,7 +57,6 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           ).then((_) => _carregarUnidades());
         },
       ),
-
       body: Stack(
         children: [
           Column(
@@ -118,7 +115,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                         crossAxisCount: 4,
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
-                        childAspectRatio: 1.0,
+                        childAspectRatio: 3.66,
                       ),
                       itemCount: unidadesDaEmpresa.length,
                       itemBuilder: (context, index) {
@@ -131,8 +128,6 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               ),
             ],
           ),
-
-          // Botão Voltar (Direita)
           Positioned(
             right: 16,
             bottom: 16,
@@ -150,14 +145,15 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     );
   }
 
-  // --- CARD DE UNIDADE COM REMOÇÃO ---
   Widget _buildUanSquareCard(BuildContext context, Unidade unidade) {
     return Stack(
       children: [
         Card(
           elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          color: Colors.white,
           child: InkWell(
             onTap: () {
               Navigator.push(
@@ -171,46 +167,54 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               );
             },
             borderRadius: BorderRadius.circular(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.withOpacity(0.1),
-                    shape: BoxShape.circle,
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.local_dining,
+                      size: 26,
+                      color: Colors.teal,
+                    ),
                   ),
-                  child: const Icon(Icons.local_dining,
-                      size: 24, color: Colors.teal),
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                  child: Text(
+                  const SizedBox(height: 8),
+                  Text(
                     unidade.nome,
                     textAlign: TextAlign.center,
-                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                     style: const TextStyle(
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      fontSize: 10,
                       color: Colors.black87,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-        // BOTÃO DELETAR UNIDADE
+
+        // 🔥 Botão de excluir reposicionado
         Positioned(
-          top: -5,
-          right: -5,
+          top: -10,
+          right: 280,
           child: IconButton(
-            icon: const Icon(Icons.remove_circle,
-                color: Colors.redAccent, size: 18),
+            icon: const Icon(
+              Icons.remove_circle,
+              color: Colors.redAccent,
+              size: 20,
+            ),
             onPressed: () {
               if (unidade.id == null) return;
+
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -218,29 +222,38 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   content: Text('Deseja remover "${unidade.nome}"?'),
                   actions: [
                     TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancelar')),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancelar'),
+                    ),
                     TextButton(
                       onPressed: () async {
                         Navigator.pop(ctx);
                         try {
                           await _unidadeService.deletarUnidade(unidade.id!);
-                          _carregarUnidades(); // Atualiza a lista
+                          _carregarUnidades();
+
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Unidade removida.')));
+                              const SnackBar(
+                                content: Text('Unidade removida.'),
+                              ),
+                            );
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
                                 content: Text('Erro: $e'),
-                                backgroundColor: Colors.red));
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           }
                         }
                       },
-                      child: const Text('Remover',
-                          style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        'Remover',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ],
                 ),

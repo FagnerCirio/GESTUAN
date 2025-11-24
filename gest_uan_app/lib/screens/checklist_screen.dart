@@ -1,5 +1,15 @@
 // lib/screens/checklist_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // NOVO: Para detecção de plataforma
+
+import 'dart:convert'; // Necessário para Base64 na Web
+// Importação condicional para Web:
+// Se ocorrer erro, use 'package:universal_html/html.dart' ou configure o import no dart tooling.
+// Para este exemplo, usaremos o 'dart:html' e ignoraremos o warning em plataformas não-web.
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+
 import '../models/checklist_item_model.dart';
 import '../models/usuario_model.dart';
 import '../models/unidade_model.dart';
@@ -29,8 +39,6 @@ class ChecklistScreen extends StatefulWidget {
 class _ChecklistScreenState extends State<ChecklistScreen> {
   Future<Map<String, List<ChecklistItem>>>? _groupedItemsFuture;
 
-  // --- CORREÇÃO DO ERRO ---
-  // Removemos o 'late'. Agora é anulável (?)
   Map<String, List<ChecklistItem>>? _dadosCarregados;
 
   final ChecklistService _service = ChecklistService();
@@ -84,6 +92,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   }
 
   void _salvarChecklist() async {
+    // ... Lógica de salvar (mantida inalterada)
     if (_respostas.length != _totalItems) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -160,9 +169,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
     try {
       _updateScore();
-
-      // --- CORREÇÃO DE SEGURANÇA ---
-      // Verificamos se a variável já foi preenchida
       final groupedItems = _dadosCarregados;
 
       if (groupedItems == null) {
@@ -170,46 +176,85 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             "Os dados ainda estão carregando. Tente novamente em alguns segundos.");
       }
 
-      final filePath = await generateChecklistPdf(
-        checklistTitle: widget.title,
-        groupedItems: groupedItems,
-        respostas: _respostas,
-        observacoesControllers: _observacoesControllers,
-        score: _currentScore,
-        nomeUsuario: widget.usuario.nome,
-        nomeUnidade: widget.unidade.nome,
-      );
+      // -------------------------------------------------------------------
+      // LÓGICA MULTIPLATAFORMA APLICADA AQUI
+      // -------------------------------------------------------------------
 
-      final openResult = await OpenFile.open(filePath);
+      if (kIsWeb) {
+        // --- Fluxo Web (Gera bytes e dispara download) ---
+        final bytes = await generateChecklistPdfBytes(
+          checklistTitle: widget.title,
+          groupedItems: groupedItems,
+          respostas: _respostas,
+          observacoesControllers: _observacoesControllers,
+          score: _currentScore,
+          nomeUsuario: widget.usuario.nome,
+          nomeUnidade: widget.unidade.nome,
+        );
 
-      if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        // Cria o download via HTML AnchorElement
+        final base64Data = base64Encode(bytes);
+        final anchor =
+            html.AnchorElement(href: "data:application/pdf;base64,$base64Data")
+              ..setAttribute("download",
+                  "checklist_${DateTime.now().millisecondsSinceEpoch}.pdf")
+              ..click();
 
-      if (openResult.type != ResultType.done) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('PDF salvo, mas não abriu: ${openResult.message}'),
-                backgroundColor: Colors.orange),
-          );
-        }
-      } else {
-        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('PDF gerado e aberto com sucesso!'),
+                content: Text('PDF gerado e download iniciado (Web).'),
                 backgroundColor: Colors.green),
           );
         }
+      } else {
+        // --- Fluxo Mobile/Desktop (Salva localmente e abre) ---
+        final filePath = await generateChecklistPdf(
+          checklistTitle: widget.title,
+          groupedItems: groupedItems,
+          respostas: _respostas,
+          observacoesControllers: _observacoesControllers,
+          score: _currentScore,
+          nomeUsuario: widget.usuario.nome,
+          nomeUnidade: widget.unidade.nome,
+        );
+
+        final openResult = await OpenFile.open(filePath);
+
+        if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        if (openResult.type != ResultType.done) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('PDF salvo, mas não abriu: ${openResult.message}'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('PDF gerado e aberto com sucesso!'),
+                  backgroundColor: Colors.green),
+            );
+          }
+        }
       }
+
+      // -------------------------------------------------------------------
     } catch (e) {
       print("Erro ao gerar PDF: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Erro: $e'), // Mensagem de erro mais limpa
-              backgroundColor: Colors.red),
+            content: Text('Erro: $e'), // Mensagem de erro mais limpa
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -265,6 +310,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ... restante da função build (mantida inalterada)
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -354,7 +400,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                   itemId, 'NA', 'N/A', Colors.grey),
                             ],
                           ),
-
                           if (_respostas[itemId] == 'NC') ...[
                             const SizedBox(height: 8),
                             TextField(

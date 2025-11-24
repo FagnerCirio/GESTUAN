@@ -36,8 +36,6 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
     return ScaffoldWithDrawer(
       title: 'Gerenciar Empresas',
       usuario: widget.usuario,
-
-      // Botão Adicionar EMPRESA
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.teal,
         child: const Icon(Icons.add, color: Colors.white),
@@ -48,7 +46,6 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
           ).then((_) => _carregarEmpresas());
         },
       ),
-
       body: FutureBuilder<List<Empresa>>(
         future: _empresasFuture,
         builder: (context, snapshot) {
@@ -64,10 +61,10 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
             return GridView.builder(
               padding: const EdgeInsets.all(16.0),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4, // 4 Colunas
+                crossAxisCount: 3,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 1.0, // Quadrado
+                childAspectRatio: 3.6, // 🔥 QUADRADO
               ),
               itemCount: empresas.length,
               itemBuilder: (context, index) {
@@ -81,14 +78,15 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
     );
   }
 
-  // --- CARD DE EMPRESA COM REMOÇÃO ---
+  // --- CARD DE EMPRESA ESTILO QUADRADO ---
   Widget _buildEmpresaCard(BuildContext context, Empresa empresa) {
     return Stack(
       children: [
         Card(
           elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           color: Colors.white,
           child: InkWell(
             onTap: () {
@@ -102,42 +100,43 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.business,
+                        size: 26, color: Colors.blue),
                   ),
-                  child:
-                      const Icon(Icons.business, size: 24, color: Colors.blue),
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                  child: Text(
+                  const SizedBox(height: 8),
+                  Text(
                     empresa.nome,
                     textAlign: TextAlign.center,
-                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                     style: const TextStyle(
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      fontSize: 10,
                       color: Colors.black87,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-        // BOTÃO EXCLUIR (Canto direito superior)
+
+        // Botão excluir
         Positioned(
-          top: -5,
-          right: -5,
+          top: -10,
+          right: 400,
           child: IconButton(
             icon: const Icon(Icons.remove_circle,
                 color: Colors.redAccent, size: 18),
@@ -150,29 +149,37 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
                       'Deseja excluir "${empresa.nome}" e todas as suas unidades?'),
                   actions: [
                     TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancelar')),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancelar'),
+                    ),
                     TextButton(
                       onPressed: () async {
                         Navigator.pop(ctx);
                         try {
                           await _empresaService.deletarEmpresa(empresa.cnpj);
-                          _carregarEmpresas(); // Atualiza a tela
+                          _carregarEmpresas();
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Empresa removida.')));
+                              const SnackBar(
+                                content: Text('Empresa removida.'),
+                              ),
+                            );
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
                                 content: Text('Erro: $e'),
-                                backgroundColor: Colors.red));
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           }
                         }
                       },
-                      child: const Text('Excluir',
-                          style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        'Excluir',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ],
                 ),

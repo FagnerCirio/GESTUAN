@@ -48,7 +48,7 @@ class _AddEmpresaScreenState extends State<AddEmpresaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Adicionar Nova Empresa')),
+      appBar: AppBar(title: const Text('Adicionar  Empresa')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

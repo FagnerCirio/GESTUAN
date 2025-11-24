@@ -2,23 +2,22 @@
 import 'package:flutter/material.dart';
 import '../models/empresa_model.dart';
 import '../models/unidade_model.dart';
-import '../models/usuario_model.dart'; // IMPORTA O MODELO DE USUÁRIO
+import '../models/usuario_model.dart';
 import '../services/unidade_service.dart';
 import 'add_unidade_screen.dart';
 import 'unidade_detail_screen.dart';
 
 class UnidadeListScreen extends StatefulWidget {
   final Empresa empresa;
-  final Usuario usuario; // 1. TELA AGORA RECEBE O USUÁRIO
+  final Usuario usuario;
 
-  const UnidadeListScreen(
-      {super.key,
-      required this.empresa,
-      required this.usuario // 2. ADICIONADO AO CONSTRUTOR
-      });
+  const UnidadeListScreen({
+    super.key,
+    required this.empresa,
+    required this.usuario,
+  });
 
   @override
-  // 3. CORREÇÃO DA ASSINATURA DO CREATESTATE
   State<UnidadeListScreen> createState() => _UnidadeListScreenState();
 }
 
@@ -34,9 +33,11 @@ class _UnidadeListScreenState extends State<UnidadeListScreen> {
 
   void _loadUnidades() {
     setState(() {
-      _unidades = _unidadeService.getUnidades().then((unidades) => unidades
-          .where((u) => u.empresa?.cnpj == widget.empresa.cnpj)
-          .toList());
+      _unidades = _unidadeService.getUnidades().then(
+            (unidades) => unidades
+                .where((u) => u.empresa?.cnpj == widget.empresa.cnpj)
+                .toList(),
+          );
     });
   }
 
@@ -44,7 +45,8 @@ class _UnidadeListScreenState extends State<UnidadeListScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (context) => AddUnidadeScreen(empresa: widget.empresa)),
+        builder: (context) => AddUnidadeScreen(empresa: widget.empresa),
+      ),
     );
     if (result == true) {
       _loadUnidades();
@@ -57,7 +59,7 @@ class _UnidadeListScreenState extends State<UnidadeListScreen> {
       MaterialPageRoute(
         builder: (context) => UnidadeDetailScreen(
           unidade: unidade,
-          usuario: widget.usuario, // 4. PASSA O USUÁRIO PARA A TELA DE DETALHES
+          usuario: widget.usuario,
         ),
       ),
     );
@@ -76,21 +78,71 @@ class _UnidadeListScreenState extends State<UnidadeListScreen> {
             return Center(child: Text('Erro: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
-                child: Text('Nenhuma unidade cadastrada para esta empresa.'));
+              child: Text('Nenhuma unidade cadastrada para esta empresa.'),
+            );
           }
 
           final unidades = snapshot.data!;
-          return ListView.builder(
-            itemCount: unidades.length,
-            itemBuilder: (context, index) {
-              final unidade = unidades[index];
-              return ListTile(
-                title: Text(unidade.nome),
-                subtitle: Text('CNPJ: ${unidade.cnpj ?? 'Não informado'}'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () => _navigateToDetail(unidade),
-              );
-            },
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GridView.builder(
+              itemCount: unidades.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 10.0,
+                mainAxisSpacing: 10.0,
+                childAspectRatio: 1.0,
+              ),
+              itemBuilder: (context, index) {
+                final unidade = unidades[index];
+                return Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: InkWell(
+                    onTap: () => _navigateToDetail(unidade),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.restaurant,
+                            size: 32,
+                            color: Colors.teal,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          unidade.nome,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),

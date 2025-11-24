@@ -15,7 +15,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _crnController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
-  final TextEditingController _confirmaSenhaController = TextEditingController();
+  final TextEditingController _confirmaSenhaController =
+      TextEditingController();
 
   final UserService _userService = UserService();
   bool _isLoading = false;
@@ -43,7 +44,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         // Volta para a tela de login após o sucesso
         Navigator.pop(context);
-
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -76,32 +76,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _nomeController,
                   decoration: const InputDecoration(labelText: 'Nome Completo'),
-                  validator: (value) => (value?.isEmpty ?? true) ? 'Por favor, insira o nome' : null,
+                  validator: (value) => (value?.isEmpty ?? true)
+                      ? 'Por favor, insira o nome'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _crnController,
                   decoration: const InputDecoration(labelText: 'CRN'),
-                  validator: (value) => (value?.isEmpty ?? true) ? 'Por favor, insira o CRN' : null,
+                  validator: (value) => (value?.isEmpty ?? true)
+                      ? 'Por favor, insira o CRN'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(labelText: 'E-mail'),
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) => (value?.isEmpty ?? true) ? 'Por favor, insira o e-mail' : null,
+                  validator: (value) => (value?.isEmpty ?? true)
+                      ? 'Por favor, insira o e-mail'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _senhaController,
                   decoration: const InputDecoration(labelText: 'Senha'),
                   obscureText: true,
-                  validator: (value) => (value?.isEmpty ?? true) ? 'Por favor, insira a senha' : null,
+                  validator: (value) => (value?.isEmpty ?? true)
+                      ? 'Por favor, insira a senha'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmaSenhaController,
-                  decoration: const InputDecoration(labelText: 'Confirmar Senha'),
+                  decoration:
+                      const InputDecoration(labelText: 'Confirmar Senha'),
                   obscureText: true,
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
@@ -116,7 +125,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _registerUser,
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                  style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16)),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text('Cadastrar'),
