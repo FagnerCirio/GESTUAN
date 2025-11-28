@@ -152,7 +152,7 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
 
     // Ajusta a altura máxima do gráfico para caber a linha da meta
     maxY = maxY > metaAceitavel ? maxY * 1.2 : metaAceitavel * 1.2;
-    if (maxY == 0) maxY = 60;
+    if (maxY == 0) maxY = 100;
 
     List<BarChartGroupData> barGroups = [];
     for (int i = 0; i < perCapitaData.length; i++) {
@@ -188,7 +188,7 @@ class _DesperdicioGraficoScreenState extends State<DesperdicioGraficoScreen> {
     }
 
     return AspectRatio(
-      aspectRatio: 1.7,
+      aspectRatio: 3.0,
       child: BarChart(
         BarChartData(
           maxY: maxY,

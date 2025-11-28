@@ -217,3 +217,115 @@ pw.Widget _buildHeader(
     ],
   );
 }
+// -----------------------------------------------------------------------------
+// PDF DA DECLARAÇÃO DE DOAÇÃO (MESMO PADRÃO DO CHECKLIST)
+// -----------------------------------------------------------------------------
+
+Future<Uint8List> generateDeclaracaoPdfBytes({
+  required String empresa,
+  required String cnpj,
+  required String endereco,
+  required String data,
+  required String responsavel,
+  required String destinoResiduo,
+}) async {
+  final pdf = pw.Document();
+
+  pdf.addPage(
+    pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(24),
+      build: (context) {
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Center(
+              child: pw.Text(
+                'DECLARAÇÃO DE DOAÇÃO DE RESÍDUOS ORGÂNICOS',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Declaro para os devidos fins que a empresa $empresa, '
+              'inscrita no CNPJ sob o nº $cnpj, localizada em $endereco, '
+              'realizou a doação de resíduos orgânicos na data de $data, '
+              'para o seguinte destino:',
+              style: const pw.TextStyle(fontSize: 11),
+              textAlign: pw.TextAlign.justify,
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text(
+              'Destino dos resíduos: $destinoResiduo',
+              style: pw.TextStyle(
+                fontSize: 11,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Responsável técnico: $responsavel',
+              style: const pw.TextStyle(fontSize: 11),
+            ),
+            pw.SizedBox(height: 40),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'Assinatura do Responsável',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+                pw.Text(
+                  'Data: ${DateTime.now().toString().split(' ')[0]}',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 40),
+            pw.Text(
+              '_______________________________________________',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+
+  return await pdf.save();
+}
+
+Future<String> generateDeclaracaoPdf({
+  required String empresa,
+  required String cnpj,
+  required String endereco,
+  required String data,
+  required String responsavel,
+  required String destinoResiduo,
+}) async {
+  if (kIsWeb) {
+    throw UnsupportedError(
+        'Na Web utilize apenas generateDeclaracaoPdfBytes().');
+  }
+
+  final bytes = await generateDeclaracaoPdfBytes(
+    empresa: empresa,
+    cnpj: cnpj,
+    endereco: endereco,
+    data: data,
+    responsavel: responsavel,
+    destinoResiduo: destinoResiduo,
+  );
+
+  final dir = await getApplicationDocumentsDirectory();
+  final file = File(
+    '${dir.path}/declaracao_${DateTime.now().millisecondsSinceEpoch}.pdf',
+  );
+
+  await file.writeAsBytes(bytes);
+
+  return file.path;
+}

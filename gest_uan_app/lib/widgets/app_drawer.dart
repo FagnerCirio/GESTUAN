@@ -4,6 +4,7 @@ import '../models/unidade_model.dart';
 import '../screens/company_list_screen.dart';
 import '../screens/contracts_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/declaracao_doacao_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final Usuario usuario;
@@ -166,11 +167,11 @@ class AppDrawer extends StatelessWidget {
             },
           ),
 
-          // --- MENU: GERENCIAR CONTRATOS (QUADRADO) ---
+// --- MENU: GERAR DECLARAÇÃO DE DOAÇÃO (QUADRADO) ---
           _buildSquareButton(
             context: context,
             icon: Icons.description,
-            title: 'Contratos',
+            title: 'Declaração',
             iconColor: Colors.teal,
             isUnitCard: false,
             onTap: () {
@@ -178,7 +179,7 @@ class AppDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ContractsScreen(usuario: usuario),
+                  builder: (context) => const DeclaracaoDoacaoScreen(),
                 ),
               );
             },
